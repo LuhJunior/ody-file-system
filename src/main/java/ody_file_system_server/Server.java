@@ -1,29 +1,20 @@
 package ody_file_system_server;
 import java.util.ArrayList;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Scanner;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
     private static final long serialVersionUID = 1L;
-    // String ip, clientIp;
-    // String msg;
-    String root  = "C://Users/yanga/Desktop/files/";
-    ArrayList<String> existingServers = new ArrayList<>();
+    ArrayList<ServerInfo> existingServers = new ArrayList<>();
     ArrayList<String> fileList = new ArrayList<>();
-    public Server() throws RemoteException {
-        super();
-        fileList.add("minhapica.txt");
-    }
+    public Server() throws RemoteException { }
     /* public Server(String msg) throws RemoteException {
         this.msg = msg;
     } 
@@ -84,28 +75,41 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
     public void addFileToList(String path){
         System.out.println(root+path);
-        try{
+        try {
             listOfFiles.add(root+path);
-        }catch (Throwable e){
+        } catch (Throwable e) {
             System.out.println("Não foi possível adcionar a lista\n"+e);
         }
     }
  */
-    public boolean searchFile(String name) throws RemoteException {
-        // name = root+name;
-        File file = new File(name);
-        return file.exists();
-        /* for (int i = 0; i < fileList.size(); i++) {
-            if (fileList.get(i).equals(name)) return true;
-        }
+    public boolean addOtherServer(String serverIp, int serverPort) throws RemoteException {
+        return existingServers.add(new ServerInfo(serverIp, serverPort));
+    }
 
-        System.out.println("O arquivo não existe");
-        return false; */
+    public boolean searchFile(String fileName) throws RemoteException {
+        File file = new File("files/" + fileName);
+        if (file.exists()) {
+            return true;
+        } else {
+            for (ServerInfo otherServerInfo : existingServers) {
+                try {
+                    ServerInterface otherServer = (ServerInterface) Naming
+                            .lookup("rmi://" + otherServerInfo.getServerIp() + ":"
+                            + otherServerInfo.getServerPort() + "/FileSystem");
+                    if (otherServer.searchFile(fileName)) {
+                        return true;
+                    }
+                } catch (MalformedURLException | NotBoundException e) {
+					e.printStackTrace();
+				}
+            }
+            return false;
+        }
     }
 
     public byte[] getFile(String fileName) throws RemoteException {
         try {
-            Path path = Paths.get(fileName);
+            Path path = Paths.get("files/" + fileName);
             byte[] data = Files.readAllBytes(path);
             return data;
         } catch (Exception e) {
