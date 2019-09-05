@@ -5,6 +5,6 @@ import java.rmi.RemoteException;
 
 public interface ServerInterface extends Remote { 
 
-	public boolean searchFile(String fileName) throws RemoteException;
+	public String searchFile(String fileName) throws RemoteException;
      
 }

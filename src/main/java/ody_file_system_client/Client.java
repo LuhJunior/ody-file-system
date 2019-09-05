@@ -80,23 +80,23 @@ public class Client {
         }
     }
 
-    public boolean searchFile(ServerInterface Server, String fileName) {
+    public String searchFile(ServerInterface Server, String fileName) {
         try {
-            if (Server.searchFile(fileName)) {
-                return true;
-            } else {
+            String serverIp = Server.searchFile(fileName);
+            if (serverIp.equals("")) {
                 System.out.println("O servidor não possui o arquivo");
-                return false;
             }
+            return serverIp;
         } catch (Exception e) {
-            System.out.println("Servidor falhou: " + e);
-            return false;
+            System.out.println("Ocorreu um erro com servidor: " + e);
+            return "";
         }
     }
 
     public boolean addInServerList(ServerInterface Server) {
         try {
-            return Server.addOtherServer(clientIp, clientPort);
+            return (Server.addOtherServer(clientIp, clientPort) &&
+                Server.addOtherServerOnList(clientIp, clientPort));
         } catch (RemoteException e) {
             e.printStackTrace();
             return false;
@@ -146,11 +146,18 @@ public class Client {
                     Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
                     System.out.println("Digite o nome do arquivo:");
                     String fileName = readLine();
-                    if (searchFile(Server, fileName)) {
+                    String fileServerIp = searchFile(Server, fileName);
+                    if (!fileServerIp.equals("")) {
                         System.out.println("Possui o arquivo");
                         try {
-                            byte[] data = Server.getFile(fileName);
-                            saveFile("teste" + fileName, data);
+                            if (fileServerIp == serverIp) {
+                                byte[] data = Server.getFile(fileName);
+                                saveFile("teste" + fileName, data);
+                            } else {
+                                Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
+                                byte[] data = Server.getFile(fileName);
+                                saveFile("teste" + fileName, data);
+                            }
                         } catch (RemoteException e) {
                             e.printStackTrace();
                         }
@@ -172,9 +179,10 @@ public class Client {
                     if (addInServerList(Server)) {
                         System.out.println("Adicionado na lista de servidores");
                     } else {
-                        System.out.println("Chora viado");
+                        System.out.println("Não foi possível adicionar a lista de servidores");
                     }
                 } catch (MalformedURLException | RemoteException | NotBoundException e1) {
+                    System.out.println("Ocorreu um erro com o servidor");
                     e1.printStackTrace();
                 }
             } else if (command.equals("ajuda")) {
