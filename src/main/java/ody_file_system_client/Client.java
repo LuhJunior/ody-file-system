@@ -8,17 +8,20 @@ import java.util.Scanner;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+
 import ody_file_system_server.ServerInterface;
 
 public class Client {
     private String clientIp, serverIp;
     private int clientPort, serverPort;
+    private Thread Server;
     
     public Client() {
         this.clientIp = "";
         this.clientPort = 1099;
         this.serverIp = "";
         this.serverPort = 1099;
+        this.Server = new ServerThread();
     }
 
     public Client(String clientIp, int clientPort) {
@@ -60,7 +63,14 @@ public class Client {
         this.serverPort = serverPort;
     }
 
-    
+    public Thread getServer() {
+        return Server;
+    }
+
+    public void setServer(Thread server) {
+        Server = server;
+    }
+
     public void readServerIp() {
         System.out.println("Digite o ip do servidor:");
         String serverIp = readLine();
@@ -76,7 +86,7 @@ public class Client {
     public void verifyEmptyServerIp() {
         while (serverIp.equals("")) {
             readServerIp();
-            readServerPort();
+            // readServerPort();
         }
     }
 
@@ -106,12 +116,12 @@ public class Client {
     public boolean saveFile(String fileName, byte [] data) {
         File file = new File(fileName);
         try { 
-            OutputStream os = new FileOutputStream(file); 
-            os.write(data); 
+            OutputStream os = new FileOutputStream(file);
+            os.write(data);
             System.out.println("Arquivo salvo com sucesso!"); 
-            os.close(); 
+            os.close();
             return true;
-        } catch (Exception e) { 
+        } catch (Exception e) {
             System.out.println("Exception: " + e);
             return false;
         }
@@ -122,7 +132,8 @@ public class Client {
         System.out.println("buscar - para buscar um arquivo");
         System.out.println("serverip - para definir o ip do servidor");
         System.out.println("serverport - para definir a porta do servidor");
-        System.out.println("servermode - para entrat na rede distribuída");
+        System.out.println("servermode - para entrar na rede distribuída");
+        System.out.println("servermodeoff - para sair da rede distribuída");
         System.out.println("ajuda - para imprimir esse menu");
         System.out.println("sair - para encerrar a aplicacao");
         System.out.println("$---------------------------------------------------$");
@@ -130,8 +141,7 @@ public class Client {
 
     public String readLine() {
         Scanner in = new Scanner(System.in);
-        String cmd = in.nextLine();
-        return cmd;
+        return  in.nextLine();
     }
 
     public void exec() {
@@ -172,18 +182,30 @@ public class Client {
             } else if (command.equals("serverport")) {
                 readServerPort();
             } else if (command.equals("servermode")) {
-                verifyEmptyServerIp();
-                try {
-                    ServerInterface Server;
-                    Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
-                    if (addInServerList(Server)) {
-                        System.out.println("Adicionado na lista de servidores");
-                    } else {
-                        System.out.println("Não foi possível adicionar a lista de servidores");
+                if (!this.Server.isAlive()) {
+                    try {
+                        verifyEmptyServerIp();
+                        ServerInterface Server;
+                        Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
+                        if (addInServerList(Server)) {
+                            System.out.println("Adicionado na lista de servidores");
+                            this.Server.start();
+                            System.out.println("Thread do servidor iniciada");
+                        } else {
+                            System.out.println("Não foi possível adicionar a lista de servidores");
+                        }
+                    } catch (MalformedURLException | RemoteException | NotBoundException e1) {
+                        System.out.println("Ocorreu um erro com o servidor");
+                        e1.printStackTrace();
                     }
-                } catch (MalformedURLException | RemoteException | NotBoundException e1) {
-                    System.out.println("Ocorreu um erro com o servidor");
-                    e1.printStackTrace();
+                } else {
+                    System.out.println("O seu servidor já está ligado");
+                }
+            } else if (command.equals("servermodeoff")) {
+                if (this.Server.isAlive()) {
+                    this.Server.interrupt();
+                } else {
+                    System.out.println("O seu servidor já está desligado");
                 }
             } else if (command.equals("ajuda")) {
                 System.out.println("\n\n\n\n\n\n\n");
@@ -194,5 +216,6 @@ public class Client {
                 System.out.println("Comando não reconhecido!");
             }
         }
-    }    
+    }
+
 }
