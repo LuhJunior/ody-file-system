@@ -92,13 +92,14 @@ public class Client {
 
     public String searchFile(ServerInterface Server, String fileName) {
         try {
-            String serverIp = Server.searchFile(fileName);
+            String serverIp = Server.searchFile(fileName, getClientIp());
             if (serverIp.equals("")) {
                 System.out.println("O servidor não possui o arquivo");
             }
             return serverIp;
         } catch (Exception e) {
-            System.out.println("Ocorreu um erro com servidor: " + e);
+            System.out.println("Cliente Não Autorizado");
+            // System.out.println("Ocorreu um erro com servidor: " + e);
             return "";
         }
     }
@@ -169,10 +170,11 @@ public class Client {
                                 saveFile("teste" + fileName, data);
                             }
                         } catch (RemoteException e) {
-                            e.printStackTrace();
+                            System.out.println(e.getMessage());
+                            // e.printStackTrace();
                         }
                     } else {
-                        System.out.println("Chora viado");
+                        System.out.println("Não foi possível baxar o arquivo");
                     }
                 } catch (MalformedURLException | RemoteException | NotBoundException e1) {
                     e1.printStackTrace();

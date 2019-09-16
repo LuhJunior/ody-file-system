@@ -8,6 +8,7 @@ public interface ServerInterface extends Remote {
 	public boolean addOtherServer(String serverIp, int serverPort) throws RemoteException;
 	public boolean removeServerOnList(String serverIp, int serverPort) throws RemoteException;
 	public boolean removeServer(String serverIp, int serverPort) throws RemoteException;
-	public String searchFile(String fileName) throws RemoteException;
+	public String checkFile(String fileName, String clientIp) throws RemoteException;
+	public String searchFile(String fileName, String clientIp) throws RemoteException;
 	public byte[] getFile(String fileName) throws RemoteException;
 }
