@@ -1,6 +1,7 @@
 package ody_file_system_server;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -23,6 +24,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   ArrayList<ServerInfo> existingServers = new ArrayList<>();
   // ArrayList<String> fileList = new ArrayList<>();
   Map<String, ArrayList<String>> permissions = new HashMap<>();
+  Map<String, Request> requests = new HashMap<>();
 
   public Server() throws RemoteException {
     loadFilePermissions();
@@ -34,6 +36,14 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   public void setPermissions(Map<String, ArrayList<String>> permissions) {
     this.permissions = permissions;
+  }
+
+  public Map<String, Request> getRequests() {
+    return requests;
+  }
+
+  public void setRequests(Map<String, Request> requests) {
+    this.requests = requests;
   }
 
   public void loadFilePermissions() {
@@ -61,7 +71,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         buffer.close();
       } catch (FileNotFoundException e) {
         System.out.println("Erro brabo: " + e);
-        e.printStackTrace();
+        // e.printStackTrace();
       }
     }
   }
@@ -115,12 +125,23 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     if (file.exists()) {
       try {
         ArrayList<String> authIps = this.permissions.get(fileName);
-        if (authIps == null) {
-          return InetAddress.getLocalHost().getHostAddress();
-        } else if (authIps.contains(clientIp)) {
+        if (authIps == null || authIps.contains(clientIp)) {
+          Request req = requests.get(clientIp);
+          if (req == null) {
+            requests.put(clientIp, new Request(Calendar.getInstance().getTimeInMillis(), 1));
+          } else if ((req.getLastRequest() - Calendar.getInstance().getTimeInMillis())/60 < 1) {
+            req.setLastRequest(Calendar.getInstance().getTimeInMillis());
+            req.setCount(req.getCount() + 1);
+            requests.put(clientIp, req);
+          } else {
+            req.setCount(req.getCount() > 0 ? req.getCount() - 1 : 0);
+            req.setLastRequest(Calendar.getInstance().getTimeInMillis());
+            requests.put(clientIp, req);
+          }
           return InetAddress.getLocalHost().getHostAddress();
         } else {
           // System.out.println("Cliente não autorizado");
+          // throw (RemoteException) new MyException("Cliente não autorizado");
           throw new RemoteException("Cliente não autorizado", new Throwable("Cliente não autorizado"));
         }
       } catch (UnknownHostException e) {
@@ -132,23 +153,30 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   public String searchFile(String fileName, String clientIp) throws RemoteException {
-    String serverFileIp = checkFile(fileName, clientIp);
-    if (serverFileIp.equals("")) {
-      for (ServerInfo otherServerInfo : existingServers) {
-        try {
-          ServerInterface otherServer = (ServerInterface) Naming
-            .lookup("rmi://" + otherServerInfo.getServerIp() + ":"
-            + otherServerInfo.getServerPort() + "/FileSystem");
-          if (!otherServer.checkFile(fileName, clientIp).equals("")) {
-            return otherServerInfo.getServerIp();
+    Request req = requests.get(clientIp);
+    if (req == null  || req.getCount() < 5 
+      || (req.getLastRequest() - Calendar.getInstance().getTimeInMillis()) / 360 > 1
+      ) {
+      String serverFileIp = checkFile(fileName, clientIp);
+      if (serverFileIp.equals("")) {
+        for (ServerInfo otherServerInfo : existingServers) {
+          try {
+            ServerInterface otherServer = (ServerInterface) Naming
+              .lookup("rmi://" + otherServerInfo.getServerIp() + ":"
+              + otherServerInfo.getServerPort() + "/FileSystem");
+            if (!otherServer.checkFile(fileName, clientIp).equals("")) {
+              return otherServerInfo.getServerIp();
+            }
+          } catch (MalformedURLException | NotBoundException e) {
+            e.printStackTrace();
+            return "";
           }
-        } catch (MalformedURLException | NotBoundException e) {
-          e.printStackTrace();
-          return "";
         }
       }
+      return serverFileIp;
     }
-    return serverFileIp;
+    throw new RemoteException("O Cliente excedeu o número máximo de requisições",
+      new Throwable("O Cliente excedeu o número máximo de requisições, que pode fazer em um minuto, e está bloqueado.\n Só será desbloqueiado despois de uma hora"));
   }
 
   public byte[] getFile(String fileName) throws RemoteException {

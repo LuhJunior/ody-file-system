@@ -1,2 +1,1 @@
-teste.txt localhost
 file.txt 192.0.1.5 198.301.548.1

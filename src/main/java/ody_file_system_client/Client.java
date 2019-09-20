@@ -97,9 +97,8 @@ public class Client {
                 System.out.println("O servidor não possui o arquivo");
             }
             return serverIp;
-        } catch (Exception e) {
-            System.out.println("Cliente Não Autorizado");
-            // System.out.println("Ocorreu um erro com servidor: " + e);
+        } catch (RemoteException e) {
+            System.out.println(e.detail.getCause().getMessage());
             return "";
         }
     }
@@ -109,7 +108,7 @@ public class Client {
             return (Server.addOtherServer(clientIp, clientPort) &&
                 Server.addOtherServerOnList(clientIp, clientPort));
         } catch (RemoteException e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             return false;
         }
     }
@@ -123,7 +122,7 @@ public class Client {
             os.close();
             return true;
         } catch (Exception e) {
-            System.out.println("Exception: " + e);
+            System.out.println("Erro ao baixar o arquivo");
             return false;
         }
     }
@@ -159,7 +158,7 @@ public class Client {
                     String fileName = readLine();
                     String fileServerIp = searchFile(Server, fileName);
                     if (!fileServerIp.equals("")) {
-                        System.out.println("Possui o arquivo");
+                        System.out.println("O Servidor Possui o arquivo");
                         try {
                             if (fileServerIp == serverIp) {
                                 byte[] data = Server.getFile(fileName);
@@ -173,11 +172,10 @@ public class Client {
                             System.out.println(e.getMessage());
                             // e.printStackTrace();
                         }
-                    } else {
-                        System.out.println("Não foi possível baxar o arquivo");
                     }
                 } catch (MalformedURLException | RemoteException | NotBoundException e1) {
-                    e1.printStackTrace();
+                    System.out.println("Erro ao conectar com servidor");
+                    // e1.printStackTrace();
                 }
             } else if (command.equals("serverip")) {
                 readServerIp();
@@ -197,8 +195,8 @@ public class Client {
                             System.out.println("Não foi possível adicionar a lista de servidores");
                         }
                     } catch (MalformedURLException | RemoteException | NotBoundException e1) {
-                        System.out.println("Ocorreu um erro com o servidor");
-                        e1.printStackTrace();
+                        System.out.println("Ocorreu ao conectar com o servidor");
+                        // e1.printStackTrace();
                     }
                 } else {
                     System.out.println("O seu servidor já está ligado");
