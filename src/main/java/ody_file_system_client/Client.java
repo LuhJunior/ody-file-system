@@ -29,6 +29,7 @@ public class Client {
         this.clientPort = clientPort;
         this.serverIp = "";
         this.serverPort = 1099;
+        this.Server = new ServerThread();
     }
 
     public String getClientIp() {
@@ -132,7 +133,8 @@ public class Client {
         System.out.println("buscar - para buscar um arquivo");
         System.out.println("serverip - para definir o ip do servidor");
         System.out.println("serverport - para definir a porta do servidor");
-        System.out.println("servermode - para entrar na rede distribuída");
+        System.out.println("entrar na rede - para entrar na rede distribuída");
+        System.out.println("servermode - para ligar o servidor do cliente");
         System.out.println("servermodeoff - para sair da rede distribuída");
         System.out.println("ajuda - para imprimir esse menu");
         System.out.println("sair - para encerrar a aplicacao");
@@ -181,21 +183,31 @@ public class Client {
                 readServerIp();
             } else if (command.equals("serverport")) {
                 readServerPort();
+            } else if (command.equals("entrar na rede")) {
+                try {
+                    verifyEmptyServerIp();
+                    ServerInterface Server;
+                    Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
+                    if (addInServerList(Server)) {
+                        System.out.println("Adicionado na lista de servidores");
+                        if (!this.Server.isAlive()) {
+                            this.Server.start();
+                            System.out.println("Thread do servidor iniciada");
+                        }
+                    } else {
+                        System.out.println("Não foi possível adicionar a lista de servidores");
+                    }
+                } catch (MalformedURLException | RemoteException | NotBoundException e1) {
+                    System.out.println("Ocorreu ao conectar com o servidor");
+                    // e1.printStackTrace();
+                }
             } else if (command.equals("servermode")) {
                 if (!this.Server.isAlive()) {
                     try {
-                        verifyEmptyServerIp();
-                        ServerInterface Server;
-                        Server = (ServerInterface) Naming.lookup("rmi://" + serverIp + ":" + serverPort + "/FileSystem");
-                        if (addInServerList(Server)) {
-                            System.out.println("Adicionado na lista de servidores");
-                            this.Server.start();
-                            System.out.println("Thread do servidor iniciada");
-                        } else {
-                            System.out.println("Não foi possível adicionar a lista de servidores");
-                        }
-                    } catch (MalformedURLException | RemoteException | NotBoundException e1) {
-                        System.out.println("Ocorreu ao conectar com o servidor");
+                        this.Server.start();
+                        System.out.println("Thread do servidor iniciada");
+                    } catch (Exception e1) {
+                        System.out.println("Ocorreu ao ligar o servidor");
                         // e1.printStackTrace();
                     }
                 } else {
@@ -211,11 +223,11 @@ public class Client {
                 System.out.println("\n\n\n\n\n\n\n");
                 menu();
             } else if (command.equals("sair")) {
+                this.Server.interrupt();
                 break;
             } else {
                 System.out.println("Comando não reconhecido!");
             }
         }
     }
-
 }
