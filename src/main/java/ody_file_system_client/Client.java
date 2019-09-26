@@ -92,15 +92,18 @@ public class Client {
     }
 
     public String searchFile(ServerInterface Server, String fileName) {
+        String serverIp = "";
         try {
-            String serverIp = Server.searchFile(fileName, getClientIp());
+            serverIp = Server.searchFile(fileName, getClientIp());
             if (serverIp.equals("")) {
                 System.out.println("O servidor não possui o arquivo");
             }
             return serverIp;
         } catch (RemoteException e) {
             System.out.println(e.detail.getCause().getMessage());
-            return "";
+            serverIp = "";
+        } finally {
+            return serverIp;
         }
     }
 
